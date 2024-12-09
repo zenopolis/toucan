@@ -2,6 +2,9 @@
 
 Toucan is a markdown-based Static Site Generator (SSG) written in Swift.
 
+## Prerequisite
+Ensure you have `Swift` installed. For instructions check [how to install swift](https://www.swift.org/install/)
+
 ## Install
 
 Clone or download the repository & run:
@@ -11,11 +14,11 @@ Clone or download the repository & run:
 git clone https://github.com/toucansites/toucan.git
 cd toucan
 make install
+# alternatively, if you encounter permission errors:
+# sudo !!
 # verify installation
 which toucan
 ```
-
-NOTE: version 1.0.0-alpha.2 only supports macOS, Linux support is coming soon.
 
 ## Available commands
 
@@ -34,6 +37,8 @@ Watch the source folder to any changes, to automatically re-generate the site.
 ```shell
 toucan watch ./src ./docs --base-url http://localhost:3000/
 ```
+
+NOTE: version 1.0.0-beta.1 watch command only supports macOS, Linux support is coming soon.
 
 ### serve
 

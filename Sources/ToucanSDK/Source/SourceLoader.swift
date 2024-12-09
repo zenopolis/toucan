@@ -12,6 +12,7 @@ struct SourceLoader {
 
     let baseUrl: String?
     let sourceUrl: URL
+    let yamlFileLoader: FileLoader
     let fileManager: FileManager
     let frontMatterParser: FrontMatterParser
     let logger: Logger
@@ -21,22 +22,75 @@ struct SourceLoader {
 
         let configLoader = ConfigLoader(
             sourceUrl: sourceUrl,
-            fileManager: fileManager,
-            baseUrl: baseUrl,
+            fileLoader: yamlFileLoader,
             logger: logger
         )
         let config = try configLoader.load()
 
-        let contentTypeLoader = ContentTypeLoader(
+        let siteLoader = SiteLoader(
             sourceUrl: sourceUrl,
             config: config,
-            fileManager: fileManager
+            fileLoader: .yaml,
+            baseUrl: baseUrl,
+            logger: logger
         )
+        let site = try siteLoader.load()
+
+        let sourceConfig = SourceConfig(
+            sourceUrl: sourceUrl,
+            config: config,
+            site: site
+        )
+
+        logger.trace(
+            "Themes location url: `\(sourceConfig.themesUrl.absoluteString)`"
+        )
+        logger.trace(
+            "Current theme url: `\(sourceConfig.currentThemeUrl.absoluteString)`"
+        )
+        logger.trace(
+            "Current theme assets url: `\(sourceConfig.currentThemeAssetsUrl.absoluteString)`"
+        )
+        logger.trace(
+            "Current theme templates url: `\(sourceConfig.currentThemeTemplatesUrl.absoluteString)`"
+        )
+        logger.trace(
+            "Current theme types url: `\(sourceConfig.currentThemeTypesUrl.absoluteString)`"
+        )
+
+        logger.trace(
+            "Theme override url: `\(sourceConfig.currentThemeOverrideUrl.absoluteString)`"
+        )
+        logger.trace(
+            "Theme override assets url: `\(sourceConfig.currentThemeOverrideAssetsUrl.absoluteString)`"
+        )
+        logger.trace(
+            "Theme override templates url: `\(sourceConfig.currentThemeOverrideTemplatesUrl.absoluteString)`"
+        )
+        logger.trace(
+            "Theme override types url: `\(sourceConfig.currentThemeOverrideTypesUrl.absoluteString)`"
+        )
+
+        let contentTypeLoader = ContentTypeLoader(
+            sourceConfig: sourceConfig,
+            fileLoader: .yaml,
+            yamlParser: .init(),
+            logger: logger
+        )
+
         let contentTypes = try contentTypeLoader.load()
 
+        let blockDirectiveLoader = BlockDirectiveLoader(
+            sourceConfig: sourceConfig,
+            fileLoader: .yaml,
+            yamlParser: .init(),
+            logger: logger
+        )
+
+        let blockDirectives = try blockDirectiveLoader.load()
+
         let pageBundleLoader = PageBundleLoader(
-            sourceUrl: sourceUrl,
-            config: config,
+            sourceConfig: sourceConfig,
             contentTypes: contentTypes,
             fileManager: fileManager,
             frontMatterParser: frontMatterParser,
@@ -45,10 +99,11 @@ struct SourceLoader {
         let pageBundles = try pageBundleLoader.load()
 
         return .init(
-            url: sourceUrl,
-            config: config,
+            sourceConfig: sourceConfig,
             contentTypes: contentTypes,
-            pageBundles: pageBundles
+            blockDirectives: blockDirectives,
+            pageBundles: pageBundles,
+            logger: logger
         )
     }
 }

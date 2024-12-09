@@ -6,6 +6,7 @@
 //
 
 import Markdown
+import Logging
 
 extension MarkdownRenderer.Delegate {
 
@@ -19,23 +20,29 @@ extension MarkdownRenderer.Delegate {
 }
 
 /// A HTML renderer for Markdown documents.
-public struct MarkdownRenderer {
+struct MarkdownRenderer {
 
     /// A delegate for the HTML renderer.
-    public protocol Delegate {
+    protocol Delegate {
         /// Override an image tag.
         func imageOverride(_ image: Image) -> String?
         /// Provide attributes for a link.
         func linkAttributes(_ link: String?) -> [String: String]
     }
 
+    let blockDirectives: [Block]
     let delegate: Delegate?
+    let logger: Logger
 
     /// Public init.
-    public init(
-        delegate: Delegate? = nil
+    init(
+        blockDirectives: [Block],
+        delegate: Delegate?,
+        logger: Logger
     ) {
+        self.blockDirectives = blockDirectives
         self.delegate = delegate
+        self.logger = logger
     }
 
     // MARK: - render api
@@ -48,61 +55,11 @@ public struct MarkdownRenderer {
             parsing: markdown,
             options: .parseBlockDirectives
         )
-        var htmlVisitor = MarkupToHTMLVisitor(delegate: delegate)
-        return htmlVisitor.visitDocument(document)
-    }
-
-    /// Render a Table of Contents
-    public func renderToC(
-        markdown: String
-    ) -> [ToC] {
-        let document = Document(
-            parsing: markdown
+        var htmlVisitor = MarkupToHTMLVisitor(
+            blockDirectives: blockDirectives,
+            delegate: delegate,
+            logger: logger
         )
-        var headingsVisitor = MarkupToHXVisitor()
-        return Self.buildToC(headingsVisitor.visitDocument(document))
-    }
-
-    // MARK: - private
-
-    static func buildToC(
-        _ headings: [MarkupToHXVisitor.HX]
-    ) -> [ToC] {
-        var result: [ToC] = []
-        var stack: [ToC] = []
-
-        for heading in headings {
-            let newNode = ToC(
-                level: heading.level,
-                text: heading.text,
-                fragment: heading.fragment
-            )
-
-            // Find the correct parent for the current node
-            while let last = stack.last, last.level >= heading.level {
-                stack.removeLast()
-            }
-
-            if let parent = stack.last {
-                // Append new node as a child of the last node in the stack
-                var updatedParent = parent
-                updatedParent.children.append(newNode)
-                stack[stack.count - 1] = updatedParent
-                if let index = result.firstIndex(where: {
-                    $0.fragment == parent.fragment && $0.level == parent.level
-                }) {
-                    result[index] = updatedParent
-                }
-            }
-            else {
-                // Add the new node to the result if it has no parent
-                result.append(newNode)
-            }
-
-            // Add the new node to the stack
-            stack.append(newNode)
-        }
-
-        return result
+        return htmlVisitor.visitDocument(document)
     }
 }
